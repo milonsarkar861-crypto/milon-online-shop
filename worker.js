@@ -86,6 +86,6 @@ export default {async fetch(req,env){
   const url=new URL(req.url);
   if(url.pathname==='/api/health') return json({ok:true,store:!!env.STORE,assets:!!env.ASSETS});
   if(url.pathname.startsWith('/api/')) return handleApi(req,env,url);
-  if(url.pathname==='/admin' || url.pathname==='/admin/') return Response.redirect(new URL('/admin.html',req.url),302);
+  if(url.pathname==='/admin' || url.pathname==='/admin/') return env.ASSETS.fetch(new Request(new URL('/admin.html',req.url),req));
   return env.ASSETS.fetch(req);
 }};

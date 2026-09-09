@@ -1,0 +1,5 @@
+পরের ধাপে (account credentials লাগবে):
+1. Web Push: VAPID public/private keys + admin-device subscription storage + send endpoint.
+2. Courier: choose courier (e.g. Pathao/Steadfast/RedX) and obtain merchant/API credentials; then add booking, cancel, tracking sync.
+3. Meta Ads: Meta Business + Ad Account + Page permissions + access token; then campaign/ad-set/creative creation can be integrated. Budget/spend still requires your explicit account authorization.
+4. Payment: bKash/SSLCOMMERZ etc. merchant onboarding and webhook.

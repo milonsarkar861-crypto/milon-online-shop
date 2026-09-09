@@ -1,0 +1,7 @@
+শুধু আগের Worker-এ এই আপডেট deploy করুন। নতুন Worker বা নতুন domain বানাবেন না।
+
+Worker name: floral-surf-51e5
+workers.dev URL: https://floral-surf-51e5.milonsarkar861.workers.dev
+KV binding: STORE -> MILON_SHOP_STORE -> 634c0fdad40e46b19113c42fa0a6df06
+
+GitHub connected থাকলে repository `milon-online-shop`-এর এই ফাইলগুলো replace করে main branch-এ push/commit করলে existing Cloudflare deployment update হবে।

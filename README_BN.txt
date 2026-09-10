@@ -24,3 +24,10 @@ IMPORTANT:
 2) Public website URL পরিবর্তন হবে না।
 3) Admin password পরে বদলানো উচিত।
 4) Free Cloudflare KV-এর দৈনিক সীমা আছে; ছোট/শুরুর দোকানের জন্য এটি যথেষ্ট হওয়ার কথা।
+
+
+WHATSAPP AUTO NOTIFICATION
+এই ভার্সনে WhatsApp Business Cloud API notification code প্রস্তুত করা আছে। Cloudflare-এ WHATSAPP_ACCESS_TOKEN, WHATSAPP_PHONE_NUMBER_ID এবং WHATSAPP_NOTIFY_TO=8801834156413 সেট করতে হবে। Token GitHub-এ দেওয়া যাবে না।
+
+
+এই আপডেটে storefront ও Admin-এর e-commerce category সাজানো হয়েছে: Men / ছেলেদের, Women / মেয়েদের, Fashion / ফ্যাশন, পোশাক, জুতা, ঘড়ি, চশমা, কসমেটিক্স, স্কিন কেয়ার, হেয়ার কেয়ার, পার্সোনাল কেয়ার, ইলেকট্রনিক্স, মোবাইল ও অ্যাকসেসরিজ, হোম ও কিচেন, স্বাস্থ্য ও ফিটনেস, অন্যান্য। Search box এবং category filter চালু আছে। WhatsApp API আগের মতোই পরে configure করা যাবে।

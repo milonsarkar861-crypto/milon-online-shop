@@ -31,6 +31,12 @@ async function allProducts(env){
   if(!env.STORE) return DEFAULT_PRODUCTS;
   let arr=await listAll(env,'product:');
   if(!arr.length){for(const p of DEFAULT_PRODUCTS) await env.STORE.put(key(p.id),JSON.stringify(p));arr=[...DEFAULT_PRODUCTS]}
+  // Keep the user's initial Fair & Handsome stock visible if it was previously added
+  // but is missing after a deployment/data reset. This does not overwrite an existing product.
+  if(!arr.some(p=>String(p.name).toLowerCase().includes('fair and handsome'))){
+    const starter={id:'fair-handsome-10g',name:'Emami Fair and Handsome Cream 10g',category:'Men / ছেলেদের',desc:'10g cream',price:40,cost:0,stock:4,active:true,image:'',supplier:'ফ্রি পাওয়া',sampleTest:'Passed',notes:'ফ্রি পাওয়া ৪টি পণ্য'};
+    await env.STORE.put(key(starter.id),JSON.stringify(starter)); arr.push(starter);
+  }
   return arr.sort((a,b)=>String(a.name).localeCompare(String(b.name),'bn'));
 }
 
@@ -75,10 +81,44 @@ async function handleApi(req,env,url){
 
   if(url.pathname==='/api/orders' && req.method==='POST'){
     if(!env.STORE) return json({error:'STORE binding missing'},500);
-    const order=await req.json();
+    const order=await req.json().catch(()=>({}));
     if(!order.name||!order.phone||!order.address||!Array.isArray(order.items)||!order.items.length) return json({error:'অর্ডারের তথ্য অসম্পূর্ণ'},400);
+    if(!order.deliveryPaidConfirmed) return json({error:'ডেলিভারি চার্জ অগ্রিম bKash পেমেন্ট নিশ্চিত করুন'},400);
+    const delivery=Number(order.delivery||0);
+    if(![60,80].includes(delivery)) return json({error:'ডেলিভারি চার্জ সঠিক নয়'},400);
+
+    // Rebuild the order from server-side product data so customers cannot alter price.
+    // Also reduce stock after a successful order so sold-out items disappear from the shop.
+    const serverProducts=await allProducts(env);
+    const requested=[];
+    for(const raw of order.items){
+      const id=String(raw?.id||'');
+      const qty=Math.floor(Number(raw?.qty||0));
+      if(!id||qty<1) return json({error:'পণ্যের quantity সঠিক নয়'},400);
+      const p=serverProducts.find(x=>String(x.id)===id && x.active && Number(x.stock)>0 && Number(x.price)>0);
+      if(!p) return json({error:'একটি পণ্য আর স্টকে নেই। পেজ Refresh করে আবার চেষ্টা করুন।'},409);
+      if(qty>Number(p.stock)) return json({error:`${p.name} এর পর্যাপ্ত stock নেই। সর্বোচ্চ ${p.stock} টি নিতে পারবেন।`},409);
+      requested.push({product:p,qty});
+    }
+    const items=requested.map(({product:p,qty})=>({id:p.id,name:p.name,qty,price:Number(p.price)}));
+    const subtotal=items.reduce((sum,i)=>sum+i.qty*i.price,0);
     const id='ORD-'+Date.now().toString(36).toUpperCase();
-    const record={id,createdAt:new Date().toISOString(),status:'নতুন',courier:'',tracking:'',...order};
+    const record={
+      id,createdAt:new Date().toISOString(),status:'নতুন',courier:'',tracking:'',
+      name:String(order.name).trim(),phone:String(order.phone).trim(),address:String(order.address).trim(),
+      items,delivery,deliveryPayment:'অগ্রিম bKash',deliveryPaymentNumber:'01834156413',
+      senderNumber:String(order.senderNumber||'').trim(),trxid:String(order.trxid||'').trim(),
+      deliveryPaidConfirmed:true,subtotal,total:subtotal+delivery,codAmount:subtotal,
+      payment:'পণ্যের মূল্য Cash on Delivery'
+    };
+    if(!record.name||!record.phone||!record.address||!record.senderNumber||!record.trxid) return json({error:'অর্ডারের প্রয়োজনীয় তথ্য পূরণ করুন'},400);
+
+    for(const {product:p,qty} of requested){
+      const latest=await env.STORE.get(key(p.id),'json');
+      if(!latest || !latest.active || Number(latest.stock)<qty) return json({error:`${p.name} এর stock পরিবর্তিত হয়েছে। Refresh করে আবার চেষ্টা করুন।`},409);
+      latest.stock=Math.max(0,Number(latest.stock)-qty);
+      await env.STORE.put(key(p.id),JSON.stringify(latest));
+    }
     await env.STORE.put('order:'+id,JSON.stringify(record));
 
     // Optional automatic WhatsApp Business Cloud API notification.
@@ -147,5 +187,7 @@ export default {async fetch(req,env){
   if(url.pathname==='/api/health') return json({ok:true,store:!!env.STORE,assets:!!env.ASSETS});
   if(url.pathname.startsWith('/api/')) return handleApi(req,env,url);
   if(url.pathname==='/admin' || url.pathname==='/admin/') return env.ASSETS.fetch(new Request(new URL('/admin.html',req.url),req));
+  // Category URLs are real storefront routes, rendered by the same product app.
+  if(/^\/category\/[^/]+$/.test(url.pathname)) return env.ASSETS.fetch(new Request(new URL('/index.html',req.url),req));
   return env.ASSETS.fetch(req);
 }};

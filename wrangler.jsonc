@@ -3,8 +3,14 @@
   "name": "floral-surf-51e5",
   "main": "worker.js",
   "compatibility_date": "2026-09-07",
-  "assets": { "directory": "./public", "binding": "ASSETS" },
+  "assets": {
+    "directory": "./Public",
+    "binding": "ASSETS"
+  },
   "kv_namespaces": [
-    { "binding": "STORE", "id": "634c0fdad40e46b19113c42fa0a6df06" }
+    {
+      "binding": "STORE",
+      "id": "634c0fdad40e46b19113c42fa0a6df06"
+    }
   ]
 }

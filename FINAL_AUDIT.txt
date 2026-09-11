@@ -1,0 +1,27 @@
+Milon Online Shop — Final Audited Package
+
+এই প্যাকেজে source + Public assets + Cloudflare config একসাথে আছে।
+GitHub root-এ upload করলে Public folder-এর case ঠিক থাকবে এবং wrangler.jsonc-এর সাথে মিলবে।
+
+মূল fixes:
+- Full persistent category list; old product categories are preserved.
+- Admin product picker + robust product search.
+- Public product search by name/category/description/supplier/ID.
+- Product image preservation and upload preview.
+- Product cards use contain so images are not unnecessarily cropped.
+- Settings section retained.
+- Share link placed near the bottom before footer.
+- Active product filtering requires valid price and stock.
+- Order validation retained.
+
+IMPORTANT:
+- Do not upload the ZIP itself into GitHub.
+- Extract the ZIP and upload/replace its contents at repository root.
+- Keep Public folder name exactly `Public` (capital P).
+- Do not share the Admin password with anyone.
+
+
+FINAL v8 audit additions:
+- Public order now reduces stock after a successful order and protects against stock changing during the order write, with rollback on failure.
+- Admin Settings delivery charges are enforced by the server and reflected on the Public order form.
+- Admin login supports the existing password and also accepts a Cloudflare ADMIN_PASSWORD secret if configured.

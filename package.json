@@ -1,7 +1,7 @@
 {
   "name": "milon-online-shop",
   "private": true,
-  "version": "1.0.4",
+  "version": "1.0.0",
   "scripts": {
     "deploy": "npx wrangler deploy",
     "dev": "npx wrangler dev"

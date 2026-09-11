@@ -1,41 +1,26 @@
-MILON ONLINE SHOP — FIXED UPDATE v2
+MILON ONLINE SHOP — FREE E-COMMERCE UPDATE
 
-এই ZIP আগের Milon Online Shop Worker project-এর corrected version।
-Existing Worker/domain একই থাকবে:
-https://floral-surf-51e5.milonsarkar861.workers.dev
+এই প্যাকেজটি আগের Worker `floral-surf-51e5`-এর জন্য। নতুন website/domain লাগবে না।
 
-যা ঠিক করা হয়েছে:
-1. Admin product save/update flow শক্ত করা হয়েছে।
-2. Existing product edit করলে নতুন ছবি না দিলেও আগের ছবি নষ্ট হবে না।
-3. Category এখন real dropdown; নতুন category দেওয়ার option আছে।
-4. Product Active/Inactive বাস্তবে কাজ করে।
-5. Bulk “সব Active করুন / সব Inactive করুন” যোগ করা হয়েছে।
-6. Active product-এর price/stock validation যোগ করা হয়েছে।
-7. Public page Admin-এর active product API থেকে data নেয় এবং refresh করা যায়।
-8. Public category filter + product search যোগ করা হয়েছে।
-9. Product card → Add to Cart → quantity → total flow ঠিক করা হয়েছে।
-10. Cart-এর পুরোনো invalid/stock-over quantity clean করা হয়।
-11. Order submit করার আগে server-side product/stock/price যাচাই হয়।
-12. Server order total/subtotal আবার হিসাব করে, client-এর ভুল total বিশ্বাস করে না।
-13. Admin Customer Orders refresh ও status/courier/tracking save flow রাখা ও শক্ত করা হয়েছে।
-14. Website link share/copy button যোগ করা হয়েছে।
-15. Public page-এর product loading error message পরিষ্কার করা হয়েছে।
-16. Wrangler assets directory `./public` করা হয়েছে, যাতে GitHub/Cloudflare case-sensitive deployment-এ asset path mismatch না হয়।
-17. Public/admin HTML JavaScript syntax check করা হয়েছে।
-18. Worker API smoke test করা হয়েছে: health, login, product save, public product, order create, admin order list — সব expected response দিয়েছে।
+ফিচার:
+- Unlimited products যোগ/এডিট/ডিলিট করার Admin panel
+- Product image, name, category, description, sale price, cost, stock
+- Active/Inactive control
+- Supplier + quality test note
+- Searchable product list
+- Customer cart + Cash on Delivery
+- WhatsApp order
+- Orders saved in Cloudflare KV
+- Order status: নতুন/কনফার্ম/কুরিয়ারে/ডেলিভার্ড/বাতিল
+- Courier + tracking field
+- Existing workers.dev address unchanged
 
-DEPLOY:
-- GitHub repository-তে এই ZIP খুলে আগের project-এর files replace করুন।
-- বিশেষ করে worker.js, public/index.html, public/admin.html, wrangler.jsonc replace হবে।
-- Cloudflare Worker-এর existing KV binding `STORE` একই রাখতে হবে।
-- Existing domain/Worker name পরিবর্তন করবেন না।
-- Deploy হওয়ার পরে /admin খুলে product Active করে price + stock নিশ্চিত করুন।
-- তারপর public homepage refresh করে product দেখুন।
+ADMIN:
+https://floral-surf-51e5.milonsarkar861.workers.dev/admin
+Password: Milon@8613
 
-নোট:
-- এই ZIP database/KV-এর পুরোনো product data মুছে দেয় না।
-- Real bKash payment/TrxID ছাড়া fake order test করবেন না।
-
-
-[V4 BUILD FIX]
-Cloudflare Workers Builds is configured to use ./Public (capital P), matching the existing GitHub folder convention. Do not rename this folder to public unless wrangler.jsonc is changed accordingly.
+IMPORTANT:
+1) `STORE` KV binding অবশ্যই Worker-এ থাকতে হবে। Namespace ID: 634c0fdad40e46b19113c42fa0a6df06
+2) Public website URL পরিবর্তন হবে না।
+3) Admin password পরে বদলানো উচিত।
+4) Free Cloudflare KV-এর দৈনিক সীমা আছে; ছোট/শুরুর দোকানের জন্য এটি যথেষ্ট হওয়ার কথা।

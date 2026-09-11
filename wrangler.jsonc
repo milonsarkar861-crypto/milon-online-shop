@@ -4,7 +4,7 @@
   "main": "worker.js",
   "compatibility_date": "2026-09-07",
   "assets": {
-    "directory": "./Public",
+    "directory": "./public",
     "binding": "ASSETS"
   },
   "kv_namespaces": [

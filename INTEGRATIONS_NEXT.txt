@@ -1,21 +1,5 @@
-Milon Online Shop — WhatsApp automatic order notification
-
-এই ZIP-এ automatic WhatsApp Business Cloud API notification-এর code প্রস্তুত আছে।
-কিন্তু Meta থেকে Access Token + Phone Number ID না পাওয়া পর্যন্ত server নিজে WhatsApp message পাঠাতে পারবে না।
-
-Cloudflare Worker-এ এই 3টি secret/variable সেট করুন:
-1) WHATSAPP_ACCESS_TOKEN = Meta WhatsApp Cloud API access token (Secret)
-2) WHATSAPP_PHONE_NUMBER_ID = আপনার WhatsApp Business phone number ID
-3) WHATSAPP_NOTIFY_TO = 8801834156413 (আপনার WhatsApp নম্বর; চাইলে বদলাবেন)
-
-ঐচ্ছিক:
-WHATSAPP_GRAPH_VERSION = v23.0
-
-গুরুত্বপূর্ণ: Access Token কখনও GitHub-এ লিখবেন না। Cloudflare secret/variable-এ রাখবেন।
-
-অর্ডার হলে:
-- অর্ডার KV/Admin Panel-এ সেভ হবে
-- configured থাকলে server থেকে আপনার WhatsApp-এ নতুন অর্ডারের notification যাবে
-- customer-এর browser-এ existing prefilled WhatsApp chat-ও খোলার ব্যবস্থা থাকবে
-
-Meta/Cloud API credentials না দিলে automatic WhatsApp notification চালু হবে না, তবে website-এর order system ঠিক থাকবে।
+পরের ধাপে (account credentials লাগবে):
+1. Web Push: VAPID public/private keys + admin-device subscription storage + send endpoint.
+2. Courier: choose courier (e.g. Pathao/Steadfast/RedX) and obtain merchant/API credentials; then add booking, cancel, tracking sync.
+3. Meta Ads: Meta Business + Ad Account + Page permissions + access token; then campaign/ad-set/creative creation can be integrated. Budget/spend still requires your explicit account authorization.
+4. Payment: bKash/SSLCOMMERZ etc. merchant onboarding and webhook.

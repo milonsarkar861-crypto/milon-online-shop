@@ -9,9 +9,6 @@ const DEFAULT_PRODUCTS = [
   {id:'p4',name:'ক্রিম ৪–১০ গ্রাম',category:'স্কিন কেয়ার',desc:'ব্র্যান্ড, গ্রাম ও দাম Admin থেকে সেট করুন।',price:0,cost:0,stock:0,active:false,image:'',supplier:'',sampleTest:'Pending',notes:''}
 ];
 const ADMIN_PASSWORD = 'Milon@8613';
-const DELIVERY_OPTIONS = [60,80];
-const MAX_ORDER_QTY = 20;
-const ORDER_STATUSES = ['নতুন','কনফার্ম','কুরিয়ারে','ডেলিভার্ড','বাতিল'];
 
 function json(data,status=200,extra={}){
   return new Response(JSON.stringify(data),{status,headers:{'content-type':'application/json;charset=UTF-8','cache-control':'no-store',...extra}})
@@ -91,22 +88,13 @@ async function handleApi(req,env,url){
     if(!order.name||!order.phone||!order.address||!Array.isArray(order.items)||!order.items.length)return json({error:'অর্ডারের তথ্য অসম্পূর্ণ'},400);
     const products=await allProducts(env); const items=[];
     for(const raw of order.items){
-      const p=products.find(x=>x.id===raw.id); const qty=Math.min(MAX_ORDER_QTY,Math.max(1,Math.floor(Number(raw.qty)||0)));
-      if(Number(raw.qty)>MAX_ORDER_QTY)return json({error:'একটি পণ্যের সর্বোচ্চ ২০টি অর্ডার করা যাবে।'},400);
+      const p=products.find(x=>x.id===raw.id); const qty=Math.max(1,Math.floor(Number(raw.qty)||0));
       if(!p||!p.active||p.stock<qty||p.price<=0)return json({error:`${p?.name||'একটি পণ্য'} এখন অর্ডার করা যাচ্ছে না বা পর্যাপ্ত stock নেই।`},400);
       items.push({id:p.id,name:p.name,qty,price:p.price});
     }
     const subtotal=items.reduce((s,i)=>s+i.qty*i.price,0); const delivery=Math.max(0,Number(order.delivery)||0);
-    const phone=String(order.phone).trim();
-    const trxid=String(order.trxid||'').trim();
-    const sender=String(order.senderNumber||'').trim();
-    if(!/^01\d{9}$/.test(phone))return json({error:'সঠিক ১১ সংখ্যার বাংলাদেশি মোবাইল নম্বর দিন।'},400);
-    if(!/^01\d{9}$/.test(sender))return json({error:'সঠিক bKash sender number দিন।'},400);
-    if(!trxid||trxid.length<6||trxid.length>80)return json({error:'সঠিক bKash TrxID দিন।'},400);
-    if(order.deliveryPaidConfirmed!==true)return json({error:'ডেলিভারি চার্জ bKash-এ পাঠানোর confirmation দিন।'},400);
-    if(!DELIVERY_OPTIONS.includes(delivery))return json({error:'অবৈধ delivery charge।'},400);
-    const id='ORD-'+Date.now().toString(36).toUpperCase()+'-'+crypto.randomUUID().slice(0,6).toUpperCase();
-    const record={id,createdAt:new Date().toISOString(),status:'নতুন',courier:'',tracking:'',name:String(order.name).trim(),phone,address:String(order.address).trim(),senderNumber:sender,trxid,deliveryPaidConfirmed:true,items,subtotal,total:subtotal+delivery,codAmount:subtotal,delivery};
+    const id='ORD-'+Date.now().toString(36).toUpperCase();
+    const record={id,createdAt:new Date().toISOString(),status:'নতুন',courier:'',tracking:'',...order,items,subtotal,total:subtotal+delivery,codAmount:subtotal,delivery};
     await env.STORE.put('order:'+id,JSON.stringify(record)); return json({ok:true,id,order:record});
   }
   if(url.pathname==='/api/admin/orders'&&req.method==='GET'){
@@ -117,11 +105,7 @@ async function handleApi(req,env,url){
   if(om&&req.method==='PUT'){
     if(!(await auth(req,env)))return json({error:'Unauthorized'},401);
     const current=await env.STORE.get('order:'+om[1],'json'); if(!current)return json({error:'Order not found'},404);
-    const patch=await req.json().catch(()=>({}));
-    const updated={...current};
-    if(patch.status!==undefined){if(!ORDER_STATUSES.includes(patch.status))return json({error:'অবৈধ order status'},400);updated.status=patch.status}
-    if(patch.courier!==undefined)updated.courier=String(patch.courier).slice(0,120);
-    if(patch.tracking!==undefined)updated.tracking=String(patch.tracking).slice(0,160);
+    const patch=await req.json().catch(()=>({})); const updated={...current,...patch};
     await env.STORE.put('order:'+om[1],JSON.stringify(updated)); return json({ok:true,order:updated});
   }
   return json({error:'Not found'},404);

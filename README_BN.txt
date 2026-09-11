@@ -37,4 +37,5 @@ DEPLOY:
 - Real bKash payment/TrxID ছাড়া fake order test করবেন না।
 
 
-AUDIT v3: Order endpoint now validates delivery amount, phone/bKash numbers, TrxID, payment confirmation, quantity limit, and admin order updates are field-whitelisted. Order IDs are collision-resistant. Public and admin JavaScript syntax checked after these changes.
+[V4 BUILD FIX]
+Cloudflare Workers Builds is configured to use ./Public (capital P), matching the existing GitHub folder convention. Do not rename this folder to public unless wrangler.jsonc is changed accordingly.

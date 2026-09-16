@@ -82,10 +82,32 @@ async function handleApi(req,env,url){
     if(outside){
       if(![60,80].includes(delivery)||!order.senderNumber||!order.trxid||order.deliveryPaidConfirmed!==true) return json({error:'বাইরের এলাকার অর্ডারে সঠিক Delivery Charge, bKash sender number, TrxID এবং confirmation প্রয়োজন'},400);
     }else if(delivery!==0){return json({error:'কালাই থানার ভিতরের ডেলিভারি চার্জ অবশ্যই ০ হতে হবে'},400)}
+    // Re-check products on the server so a client cannot change prices or order unavailable stock.
+    const catalog=await allProducts(env);
+    const normalizedItems=[];
+    let subtotal=0;
+    for(const item of order.items){
+      const p=catalog.find(x=>String(x.id)===String(item.id));
+      const qty=Math.floor(Number(item.qty));
+      if(!p||!p.active||Number(p.price)<=0||Number(p.stock)<=0||!Number.isInteger(qty)||qty<1||qty>Number(p.stock)) return json({error:`পণ্য/স্টক যাচাই করা যায়নি: ${item.name||item.id}`},400);
+      normalizedItems.push({id:p.id,name:p.name,qty,price:Number(p.price)});
+      subtotal += qty*Number(p.price);
+    }
+    const expectedTotal=subtotal+delivery;
     const id='ORD-'+Date.now().toString(36).toUpperCase();
-    const record={id,createdAt:new Date().toISOString(),status:'নতুন',courier:'',tracking:'',...order};
+    const record={id,createdAt:new Date().toISOString(),status:'নতুন',courier:'',tracking:'',...order,items:normalizedItems,subtotal,total:expectedTotal,codAmount:subtotal};
+    // Reserve/decrement stock before accepting the order. KV is not transactional, so re-read each item immediately before write.
+    for(const item of normalizedItems){
+      const latest=await env.STORE.get(key(item.id),'json');
+      if(!latest||!latest.active||Number(latest.stock)<item.qty||Number(latest.price)!==item.price) return json({error:`${item.name} এর স্টক/দাম পরিবর্তিত হয়েছে। আবার চেষ্টা করুন।`},409);
+    }
+    for(const item of normalizedItems){
+      const latest=await env.STORE.get(key(item.id),'json');
+      latest.stock=Math.max(0,Number(latest.stock)-item.qty);
+      await env.STORE.put(key(item.id),JSON.stringify(latest));
+    }
     await env.STORE.put('order:'+id,JSON.stringify(record));
-    return json({ok:true,id});
+    return json({ok:true,id,subtotal,total:expectedTotal});
   }
 
   if(url.pathname==='/api/admin/orders' && req.method==='GET'){

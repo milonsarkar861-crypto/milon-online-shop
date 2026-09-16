@@ -1,3 +1,5 @@
+VERSION 14 — FINAL CATEGORY SWIPE + ORDER AUDIT
+
 MILON ONLINE SHOP — FREE E-COMMERCE UPDATE
 
 এই প্যাকেজটি আগের Worker `floral-surf-51e5`-এর জন্য। নতুন website/domain লাগবে না।
@@ -24,3 +26,6 @@ IMPORTANT:
 2) Public website URL পরিবর্তন হবে না।
 3) Admin password পরে বদলানো উচিত।
 4) Free Cloudflare KV-এর দৈনিক সীমা আছে; ছোট/শুরুর দোকানের জন্য এটি যথেষ্ট হওয়ার কথা।
+
+
+Version 14 update: Search box-এর ঠিক নিচে finger-swipe category strip; category tap করলে active filter এবং product list-এ smooth scroll; product showcase horizontal auto-slide; product card/showcase tap করলে details modal; benefits section আলাদা horizontal swipe; পুরনো quick row বাদ; Payment/Delivery/Contact নিচের নির্ধারিত জায়গায়; Address শেষে। Server order-এ বর্তমান price/stock পুনরায় যাচাই এবং successful order-এ stock কমানো হয়েছে।

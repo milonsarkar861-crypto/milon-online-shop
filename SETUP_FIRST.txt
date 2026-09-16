@@ -5,3 +5,7 @@ workers.dev URL: https://floral-surf-51e5.milonsarkar861.workers.dev
 KV binding: STORE -> MILON_SHOP_STORE -> 634c0fdad40e46b19113c42fa0a6df06
 
 GitHub connected থাকলে repository `milon-online-shop`-এর এই ফাইলগুলো replace করে main branch-এ push/commit করলে existing Cloudflare deployment update হবে।
+
+
+VERSION 14 NOTE:
+Search-এর নিচে category strip-টি finger swipe করা যাবে। ঘড়ি/জুতা/প্যান্ট/শার্ট/টি-শার্ট/কসমেটিকসসহ সব fixed category tap করলে matching products filter হবে এবং product list-এ নেওয়া হবে। Product showcase-এ tap করলে details খুলবে। পুরনো Payment/Categories quick row আর নেই।

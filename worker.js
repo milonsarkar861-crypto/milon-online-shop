@@ -61,7 +61,7 @@ async function handleApi(req,env,url){
     const p=await req.json();
     if(!p.name) return json({error:'পণ্যের নাম দিন'},400);
     const id=p.id||('p_'+crypto.randomUUID());
-    const product={id,name:String(p.name),category:String(p.category||'সাধারণ'),desc:String(p.desc||''),price:Number(p.price||0),cost:Number(p.cost||0),stock:Math.max(0,Number(p.stock||0)),active:Boolean(p.active),image:String(p.image||''),supplier:String(p.supplier||''),sampleTest:String(p.sampleTest||'Pending'),notes:String(p.notes||'')};
+    const product={id,name:String(p.name),category:String(p.category||'সাধারণ'),desc:String(p.desc||''),size:String(p.size||''),usage:String(p.usage||''),benefits:String(p.benefits||''),price:Number(p.price||0),cost:Number(p.cost||0),stock:Math.max(0,Number(p.stock||0)),active:Boolean(p.active),image:String(p.image||''),supplier:String(p.supplier||''),sampleTest:String(p.sampleTest||'Pending'),notes:String(p.notes||'')};
     await env.STORE.put(key(id),JSON.stringify(product));
     return json({ok:true,product});
   }
@@ -77,6 +77,11 @@ async function handleApi(req,env,url){
     if(!env.STORE) return json({error:'STORE binding missing'},500);
     const order=await req.json();
     if(!order.name||!order.phone||!order.address||!Array.isArray(order.items)||!order.items.length) return json({error:'অর্ডারের তথ্য অসম্পূর্ণ'},400);
+    const outside=order.areaType==='কালাই থানার বাইরে';
+    const delivery=Number(order.delivery||0);
+    if(outside){
+      if(![60,80].includes(delivery)||!order.senderNumber||!order.trxid||order.deliveryPaidConfirmed!==true) return json({error:'বাইরের এলাকার অর্ডারে সঠিক Delivery Charge, bKash sender number, TrxID এবং confirmation প্রয়োজন'},400);
+    }else if(delivery!==0){return json({error:'কালাই থানার ভিতরের ডেলিভারি চার্জ অবশ্যই ০ হতে হবে'},400)}
     const id='ORD-'+Date.now().toString(36).toUpperCase();
     const record={id,createdAt:new Date().toISOString(),status:'নতুন',courier:'',tracking:'',...order};
     await env.STORE.put('order:'+id,JSON.stringify(record));

@@ -21,7 +21,7 @@ async function listAll(env,prefix){
   const out=[]; let cursor;
   do{
     const res=await env.STORE.list({prefix,cursor});
-    for(const k of res.keys){const v=await env.STORE.get(k.name,'json');if(v)out.push(v)}
+    const vals=await Promise.all(res.keys.map(k=>env.STORE.get(k.name,'json')));for(const v of vals){if(v)out.push(v)}
     cursor=res.list_complete?undefined:res.cursor;
   }while(cursor);
   return out;
@@ -80,7 +80,7 @@ async function handleApi(req,env,url){
     const outside=order.areaType==='কালাই থানার বাইরে';
     const delivery=Number(order.delivery||0);
     if(outside){
-      if(![60,80].includes(delivery)||!order.senderNumber||!order.trxid||order.deliveryPaidConfirmed!==true) return json({error:'বাইরের এলাকার অর্ডারে সঠিক Delivery Charge, bKash sender number, TrxID এবং confirmation প্রয়োজন'},400);
+      if(![60].includes(delivery)||!order.senderNumber||!order.trxid||order.deliveryPaidConfirmed!==true) return json({error:'বাইরের এলাকার অর্ডারে সঠিক Delivery Charge, bKash sender number, TrxID এবং confirmation প্রয়োজন'},400);
     }else if(delivery!==0){return json({error:'কালাই থানার ভিতরের ডেলিভারি চার্জ অবশ্যই ০ হতে হবে'},400)}
     // Re-check products on the server so a client cannot change prices or order unavailable stock.
     const catalog=await allProducts(env);

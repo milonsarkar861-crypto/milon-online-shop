@@ -8,6 +8,7 @@ const ADMIN_PASSWORD = 'Milon@8613'; // Change before public business use.
 
 function json(data,status=200){return new Response(JSON.stringify(data),{status,headers:{'content-type':'application/json;charset=UTF-8','cache-control':'no-store'}})}
 function key(id){return `product:${id}`}
+function toBool(v){return v===true || ['true','1','yes','on'].includes(String(v??'').toLowerCase())}
 async function auth(req,env){
   const c=req.headers.get('cookie')||'';
   const m=c.match(/(?:^|;\s*)milon_admin=([^;]+)/);
@@ -28,7 +29,7 @@ async function listAll(env,prefix){
 }
 
 async function allProducts(env){
-  if(!env.STORE) return DEFAULT_PRODUCTS;
+  if(!env.STORE) return [];
   let arr=await listAll(env,'product:');
   if(!arr.length){for(const p of DEFAULT_PRODUCTS) await env.STORE.put(key(p.id),JSON.stringify(p));arr=[...DEFAULT_PRODUCTS]}
   return arr.sort((a,b)=>String(a.name).localeCompare(String(b.name),'bn'));
@@ -48,7 +49,12 @@ async function handleApi(req,env,url){
     if(m&&env.STORE) await env.STORE.delete('session:'+m[1]);
     return new Response(JSON.stringify({ok:true}),{status:200,headers:{'content-type':'application/json;charset=UTF-8','set-cookie':'milon_admin=; Max-Age=0; Path=/; HttpOnly; Secure; SameSite=Lax'}});
   }
-  if(url.pathname==='/api/products' && req.method==='GET') return json({products:(await allProducts(env)).filter(p=>p.active&&Number(p.stock)>0&&Number(p.price)>0)});
+  if(url.pathname==='/api/products' && req.method==='GET') {
+    if(!env.STORE) return json({error:'STORE binding missing',products:[]},503);
+    const catalog=await allProducts(env);
+    const products=catalog.filter(p=>toBool(p.active)&&Number(p.stock)>0&&Number(p.price)>0&&Number.isFinite(Number(p.price)));
+    return json({products,activeCount:products.length,source:'KV'});
+  }
 
   if(url.pathname==='/api/admin/products' && req.method==='GET'){
     if(!(await auth(req,env))) return json({error:'Unauthorized'},401);
@@ -61,7 +67,7 @@ async function handleApi(req,env,url){
     const p=await req.json();
     if(!p.name) return json({error:'পণ্যের নাম দিন'},400);
     const id=p.id||('p_'+crypto.randomUUID());
-    const product={id,name:String(p.name),category:String(p.category||'সাধারণ'),desc:String(p.desc||''),size:String(p.size||''),usage:String(p.usage||''),benefits:String(p.benefits||''),price:Number(p.price||0),cost:Number(p.cost||0),stock:Math.max(0,Number(p.stock||0)),active:Boolean(p.active),image:String(p.image||''),supplier:String(p.supplier||''),sampleTest:String(p.sampleTest||'Pending'),notes:String(p.notes||'')};
+    const product={id,name:String(p.name),category:String(p.category||'সাধারণ'),desc:String(p.desc||''),size:String(p.size||''),usage:String(p.usage||''),benefits:String(p.benefits||''),price:Number(p.price||0),cost:Number(p.cost||0),stock:Math.max(0,Number(p.stock||0)),active:toBool(p.active),image:String(p.image||''),supplier:String(p.supplier||''),sampleTest:String(p.sampleTest||'Pending'),notes:String(p.notes||'')};
     await env.STORE.put(key(id),JSON.stringify(product));
     return json({ok:true,product});
   }

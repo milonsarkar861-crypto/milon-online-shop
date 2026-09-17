@@ -4,7 +4,7 @@ const DEFAULT_PRODUCTS = [
   {id:'p3',name:'Emami Fair and Handsome',category:'গ্রুমিং',desc:'সঠিক সাইজ ও মূল্য Admin থেকে সেট করুন।',price:0,cost:0,stock:0,active:false,image:'',supplier:'',sampleTest:'Pending',notes:''},
   {id:'p4',name:'ক্রিম ৪–১০ গ্রাম',category:'স্কিন কেয়ার',desc:'ব্র্যান্ড, গ্রাম ও দাম Admin থেকে সেট করুন।',price:0,cost:0,stock:0,active:false,image:'',supplier:'',sampleTest:'Pending',notes:''}
 ];
-const ADMIN_PASSWORD = 'Milon@8613'; // Change before public business use.
+const DEFAULT_ADMIN_PASSWORD = 'Milon@8613';
 
 function json(data,status=200){return new Response(JSON.stringify(data),{status,headers:{'content-type':'application/json;charset=UTF-8','cache-control':'no-store'}})}
 function key(id){return `product:${id}`}
@@ -37,9 +37,12 @@ async function allProducts(env){
 
 async function handleApi(req,env,url){
   if(url.pathname==='/api/admin/login' && req.method==='POST'){
-    const body=await req.json().catch(()=>({}));
-    if(body.password!==ADMIN_PASSWORD) return json({error:'Password ভুল'},401);
     if(!env.STORE) return json({error:'STORE binding missing'},500);
+    const body=await req.json().catch(()=>({}));
+    const savedPassword=await env.STORE.get('admin:password');
+    const adminPassword=savedPassword||DEFAULT_ADMIN_PASSWORD;
+    if(String(body.password||'')!==adminPassword) return json({error:'Password ভুল'},401);
+    if(!savedPassword) await env.STORE.put('admin:password',DEFAULT_ADMIN_PASSWORD);
     const token=crypto.randomUUID()+crypto.randomUUID().replaceAll('-','');
     await env.STORE.put('session:'+token,'1',{expirationTtl:60*60*24*30});
     return new Response(JSON.stringify({ok:true}),{status:200,headers:{'content-type':'application/json;charset=UTF-8','cache-control':'no-store','set-cookie':`milon_admin=${token}; Max-Age=2592000; Path=/; HttpOnly; Secure; SameSite=Lax`}});
@@ -47,7 +50,20 @@ async function handleApi(req,env,url){
   if(url.pathname==='/api/admin/logout' && req.method==='POST'){
     const c=req.headers.get('cookie')||''; const m=c.match(/(?:^|;\s*)milon_admin=([^;]+)/);
     if(m&&env.STORE) await env.STORE.delete('session:'+m[1]);
-    return new Response(JSON.stringify({ok:true}),{status:200,headers:{'content-type':'application/json;charset=UTF-8','set-cookie':'milon_admin=; Max-Age=0; Path=/; HttpOnly; Secure; SameSite=Lax'}});
+    return new Response(JSON.stringify({ok:true}),{status:200,headers:{'content-type':'application/json;charset=UTF-8','cache-control':'no-store','set-cookie':'milon_admin=; Max-Age=0; Path=/; HttpOnly; Secure; SameSite=Lax'}});
+  }
+  if(url.pathname==='/api/admin/password' && req.method==='POST'){
+    if(!(await auth(req,env))) return json({error:'Unauthorized'},401);
+    if(!env.STORE) return json({error:'STORE binding missing'},500);
+    const body=await req.json().catch(()=>({}));
+    const current=String(body.currentPassword||'');
+    const next=String(body.newPassword||'');
+    const savedPassword=await env.STORE.get('admin:password');
+    const adminPassword=savedPassword||DEFAULT_ADMIN_PASSWORD;
+    if(current!==adminPassword) return json({error:'বর্তমান Password ভুল'},400);
+    if(next.length<8) return json({error:'নতুন Password কমপক্ষে ৮ অক্ষরের হতে হবে'},400);
+    await env.STORE.put('admin:password',next);
+    return json({ok:true});
   }
   if(url.pathname==='/api/products' && req.method==='GET') {
     if(!env.STORE) return json({error:'STORE binding missing',products:[]},503);

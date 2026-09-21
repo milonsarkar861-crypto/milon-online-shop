@@ -39,10 +39,10 @@ async function handleApi(req,env,url){
   if(url.pathname==='/api/admin/login' && req.method==='POST'){
     if(!env.STORE) return json({error:'STORE binding missing'},500);
     const body=await req.json().catch(()=>({}));
-    const savedPassword=await env.STORE.get('admin:password');
-    const adminPassword=savedPassword||DEFAULT_ADMIN_PASSWORD;
+    const saved=await env.STORE.get('admin:password');
+    const adminPassword=saved||DEFAULT_ADMIN_PASSWORD;
     if(String(body.password||'')!==adminPassword) return json({error:'Password ভুল'},401);
-    if(!savedPassword) await env.STORE.put('admin:password',DEFAULT_ADMIN_PASSWORD);
+    if(!saved) await env.STORE.put('admin:password',DEFAULT_ADMIN_PASSWORD);
     const token=crypto.randomUUID()+crypto.randomUUID().replaceAll('-','');
     await env.STORE.put('session:'+token,'1',{expirationTtl:60*60*24*30});
     return new Response(JSON.stringify({ok:true}),{status:200,headers:{'content-type':'application/json;charset=UTF-8','cache-control':'no-store','set-cookie':`milon_admin=${token}; Max-Age=2592000; Path=/; HttpOnly; Secure; SameSite=Lax`}});
@@ -50,26 +50,25 @@ async function handleApi(req,env,url){
   if(url.pathname==='/api/admin/logout' && req.method==='POST'){
     const c=req.headers.get('cookie')||''; const m=c.match(/(?:^|;\s*)milon_admin=([^;]+)/);
     if(m&&env.STORE) await env.STORE.delete('session:'+m[1]);
-    return new Response(JSON.stringify({ok:true}),{status:200,headers:{'content-type':'application/json;charset=UTF-8','cache-control':'no-store','set-cookie':'milon_admin=; Max-Age=0; Path=/; HttpOnly; Secure; SameSite=Lax'}});
-  }
-  if(url.pathname==='/api/admin/password' && req.method==='POST'){
-    if(!(await auth(req,env))) return json({error:'Unauthorized'},401);
-    if(!env.STORE) return json({error:'STORE binding missing'},500);
-    const body=await req.json().catch(()=>({}));
-    const current=String(body.currentPassword||'');
-    const next=String(body.newPassword||'');
-    const savedPassword=await env.STORE.get('admin:password');
-    const adminPassword=savedPassword||DEFAULT_ADMIN_PASSWORD;
-    if(current!==adminPassword) return json({error:'বর্তমান Password ভুল'},400);
-    if(next.length<8) return json({error:'নতুন Password কমপক্ষে ৮ অক্ষরের হতে হবে'},400);
-    await env.STORE.put('admin:password',next);
-    return json({ok:true});
+    return new Response(JSON.stringify({ok:true}),{status:200,headers:{'content-type':'application/json;charset=UTF-8','set-cookie':'milon_admin=; Max-Age=0; Path=/; HttpOnly; Secure; SameSite=Lax'}});
   }
   if(url.pathname==='/api/products' && req.method==='GET') {
     if(!env.STORE) return json({error:'STORE binding missing',products:[]},503);
     const catalog=await allProducts(env);
     const products=catalog.filter(p=>toBool(p.active)&&Number(p.stock)>0&&Number(p.price)>0&&Number.isFinite(Number(p.price)));
     return json({products,activeCount:products.length,source:'KV'});
+  }
+
+  if(url.pathname==='/api/admin/password' && req.method==='POST'){
+    if(!(await auth(req,env))) return json({error:'Unauthorized'},401);
+    const body=await req.json().catch(()=>({}));
+    const current=String(body.currentPassword||''), next=String(body.newPassword||'');
+    const saved=await env.STORE.get('admin:password');
+    const adminPassword=saved||DEFAULT_ADMIN_PASSWORD;
+    if(current!==adminPassword) return json({error:'বর্তমান Password ভুল'},400);
+    if(next.length<8) return json({error:'নতুন Password কমপক্ষে ৮ অক্ষরের হতে হবে'},400);
+    await env.STORE.put('admin:password',next);
+    return json({ok:true});
   }
 
   if(url.pathname==='/api/admin/products' && req.method==='GET'){
@@ -83,7 +82,8 @@ async function handleApi(req,env,url){
     const p=await req.json();
     if(!p.name) return json({error:'পণ্যের নাম দিন'},400);
     const id=p.id||('p_'+crypto.randomUUID());
-    const product={id,name:String(p.name),category:String(p.category||'সাধারণ'),desc:String(p.desc||''),size:String(p.size||''),usage:String(p.usage||''),benefits:String(p.benefits||''),price:Number(p.price||0),cost:Number(p.cost||0),stock:Math.max(0,Number(p.stock||0)),active:toBool(p.active),image:String(p.image||''),supplier:String(p.supplier||''),sampleTest:String(p.sampleTest||'Pending'),notes:String(p.notes||'')};
+    const old=await env.STORE.get(key(id),'json');
+    const product={id,name:String(p.name),category:String(p.category||'সাধারণ'),desc:String(p.desc||''),size:String(p.size||''),usage:String(p.usage||''),benefits:String(p.benefits||''),price:Number(p.price||0),cost:Number(p.cost||0),stock:Math.max(0,Number(p.stock||0)),active:toBool(p.active),image:(p.image!==undefined&&p.image!==null&&String(p.image)!=='')?String(p.image):String(old?.image||''),supplier:String(p.supplier||''),sampleTest:String(p.sampleTest||'Pending'),notes:String(p.notes||'')};
     await env.STORE.put(key(id),JSON.stringify(product));
     return json({ok:true,product});
   }
@@ -117,7 +117,7 @@ async function handleApi(req,env,url){
     }
     const expectedTotal=subtotal+delivery;
     const id='ORD-'+Date.now().toString(36).toUpperCase();
-    const record={id,createdAt:new Date().toISOString(),status:'নতুন',courier:'',tracking:'',...order,items:normalizedItems,subtotal,total:expectedTotal,codAmount:subtotal};
+    const record={...order,id,createdAt:new Date().toISOString(),status:'নতুন',courier:'',tracking:'',items:normalizedItems,subtotal,total:expectedTotal,codAmount:subtotal};
     // Reserve/decrement stock before accepting the order. KV is not transactional, so re-read each item immediately before write.
     for(const item of normalizedItems){
       const latest=await env.STORE.get(key(item.id),'json');

@@ -7,27 +7,94 @@
 <div class="box"><div class="row"><h3 style="flex:1">পণ্য যোগ / পরিবর্তন</h3><button class="green" onclick="newProduct()">+ নতুন পণ্য</button><button class="gray" onclick="loadAll()">↻ Refresh</button></div>
 <div class="grid"><div><label>পণ্যের নাম *</label><input id="name"></div><div><label>Category</label><input id="category" placeholder="যেমন: পার্সোনাল কেয়ার"></div><div><label>বিক্রয়মূল্য ৳</label><input id="price" type="number" min="0"></div><div><label>ক্রয়মূল্য ৳</label><input id="cost" type="number" min="0"></div><div><label>Stock / Quantity</label><input id="stock" type="number" min="0"></div><div><label>Supplier</label><input id="supplier"></div><div><label>Quality Test</label><select id="sampleTest"><option>Pending</option><option>Testing</option><option>Passed</option><option>Failed</option></select></div><div><label>দোকানে দেখাবেন?</label><select id="active"><option value="false">না</option><option value="true">হ্যাঁ</option></select></div></div>
 <label>বর্ণনা</label><textarea id="desc" placeholder="পণ্যের সংক্ষিপ্ত বর্ণনা"></textarea><div class="grid"><div><label>সাইজ / ওজন</label><input id="size" placeholder="যেমন: 100ml / 50g"></div><div><label>ব্যবহার</label><input id="usage" placeholder="পণ্যটি কীভাবে/কোথায় ব্যবহার করবেন"></div></div><label>বৈশিষ্ট্য / উপকারিতা</label><textarea id="benefits" placeholder="গ্রাহককে দেখানোর বৈশিষ্ট্য/উপকারিতা; একাধিক হলে নতুন লাইনে লিখুন"></textarea><label>নোট</label><textarea id="notes"></textarea><label>পণ্যের ছবি</label><input id="imageFile" type="file" accept="image/*" onchange="previewImage()"><div id="preview" class="pic">ছবি নির্বাচন করুন</div><div class="row" style="margin-top:10px"><button class="primary" onclick="saveProduct()">Save / Update</button><button class="red" onclick="deleteProduct()">Delete</button></div><p class="profit" id="profit"></p><input id="id" type="hidden"></div>
+<div class="box"><h3>🔐 Admin Password</h3><div class="grid"><div><label>বর্তমান Password</label><input id="currentPassword" type="password" autocomplete="current-password"></div><div><label>নতুন Password</label><input id="newPassword" type="password" autocomplete="new-password"></div></div><button class="primary" onclick="changePassword()">Password পরিবর্তন করুন</button><p id="passwordMsg" class="small"></p></div>
 <div class="box" id="productBox"><div class="row"><h3 style="flex:1">পণ্য তালিকা (নতুন পণ্য যত খুশি যোগ করা যাবে)</h3><input class="search" id="productSearch" placeholder="পণ্য খুঁজুন..." oninput="renderProducts()"></div><div id="productFilterNote" class="small"></div><div id="products" class="grid"></div></div>
-<div class="box" id="passwordBox"><h3>Admin Password পরিবর্তন</h3><div class="grid"><div><label>বর্তমান Password</label><input id="currentPw" type="password" autocomplete="current-password"></div><div><label>নতুন Password</label><input id="newPw" type="password" autocomplete="new-password" minlength="8" placeholder="কমপক্ষে ৮ অক্ষর"></div><div><label>নতুন Password আবার লিখুন</label><input id="newPw2" type="password" autocomplete="new-password" minlength="8"></div></div><button class="primary" onclick="changePassword()">Password Change</button><p id="pwChangeMsg" class="small"></p></div>
 <div class="box" id="ordersBox"><div class="row"><h3 style="flex:1">Customer Orders</h3><button class="gray" onclick="loadOrders()">↻ Orders Refresh</button></div><div class="scroll"><table><thead><tr><th>ID</th><th>Customer</th><th>Items</th><th>Payment</th><th>Status</th><th>Courier</th><th>Tracking</th><th>Save</th></tr></thead><tbody id="orders"></tbody></table></div></div>
 <div class="bottomnav" id="bottomNav"><button id="navCustomers" onclick="showOrderView('customers')">👤 Customers</button><button id="navPayment" onclick="showOrderView('payment')">💳 Payment</button><button id="navDelivery" onclick="showOrderView('delivery')">🚚 Delivery</button><button id="navOrders" class="active" onclick="showOrderView('orders')">📦 Orders</button></div></div><script>
 let products=[],orders=[],editingId='',imageData='';const $=id=>document.getElementById(id);const money=n=>Number(n||0).toLocaleString('en-BD');
-async function api(path,opt={}){const r=await fetch(path,{...opt,credentials:'same-origin',cache:'no-store'});if(r.status===401)throw Error('UNAUTHORIZED');const j=await r.json();if(!r.ok)throw Error(j.error||'Request failed');return j}
-async function login(){const password=$('pw').value;if(!password)return;$('msg').textContent='Login হচ্ছে...';try{await api('/api/admin/login',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({password})});$('login').classList.add('hidden');$('app').classList.remove('hidden');try{await loadAll()}catch(e){console.error(e);$('productFilterNote').textContent='Admin login হয়েছে, কিন্তু data load করতে সমস্যা হয়েছে। Refresh চাপুন।'}}catch(e){console.error(e);$('msg').textContent=e.message==='UNAUTHORIZED'?'Password ভুল।':'Login হচ্ছে না — STORE binding/deployment চেক করুন।'}}
-async function logout(){try{await fetch('/api/admin/logout',{method:'POST',credentials:'same-origin',cache:'no-store'})}finally{location.replace('/admin.html')}}
-async function changePassword(){const currentPassword=$('currentPw').value,newPassword=$('newPw').value,newPassword2=$('newPw2').value;if(!currentPassword||!newPassword)return $('pwChangeMsg').textContent='সব Password ঘর পূরণ করুন।';if(newPassword.length<8)return $('pwChangeMsg').textContent='নতুন Password কমপক্ষে ৮ অক্ষরের হতে হবে।';if(newPassword!==newPassword2)return $('pwChangeMsg').textContent='নতুন Password দুইবার একই হতে হবে।';try{await api('/api/admin/password',{method:'POST',headers:{'content-type':'application/json'},credentials:'same-origin',body:JSON.stringify({currentPassword,newPassword})});$('pwChangeMsg').textContent='Password সফলভাবে পরিবর্তন হয়েছে।';$('currentPw').value='';$('newPw').value='';$('newPw2').value='';}catch(e){$('pwChangeMsg').textContent=e.message}}
-(async()=>{try{await loadAll();$('login').classList.add('hidden');$('app').classList.remove('hidden')}catch(e){}})();
-async function loadAll(){const j=await api('/api/admin/products');products=j.products||[];renderProducts();await loadOrders()}
-async function loadOrders(){const j=await api('/api/admin/orders');orders=j.orders||[];renderOrders(orders);$('countOrders').textContent=orders.length}
-let productView='all';function showProductView(view){productView=view;renderProducts();$('productBox').scrollIntoView({behavior:'auto',block:'start'});$('productBox').classList.add('focusbox');setTimeout(()=>$('productBox').classList.remove('focusbox'),900)}function renderProducts(){const q=($('productSearch').value||'').toLowerCase();let list=products.filter(p=>(p.name+' '+p.category+' '+p.supplier).toLowerCase().includes(q));$('countProducts').textContent=products.length;$('countActive').textContent=products.filter(p=>p.active).length;if(productView==='active')list=list.filter(p=>p.active);$('productFilterNote').textContent=productView==='active'?'শুধু Active পণ্য দেখানো হচ্ছে।':'সব পণ্য দেখানো হচ্ছে।';$('products').innerHTML=list.length?list.map(p=>`<div class="card"><div class="pic">${p.image?`<img src="${p.image}" alt="">`:'ছবি নেই'}</div><b>${esc(p.name)}</b><div class="small">${esc(p.category)} · Stock ${p.stock} · ${p.active?'<span class="ok">Active</span>':'Inactive'}</div><div>বিক্রয়: ৳${money(p.price)} | ক্রয়: ৳${money(p.cost)}</div><div class="profit">লাভ: ৳${money(p.price-p.cost)}</div><div class="small">Quality: ${esc(p.sampleTest)}</div><div class="row" style="margin-top:8px"><button onclick="edit('${p.id}')">Edit</button><button class="green" onclick="toggle('${p.id}')">${p.active?'Hide':'Active'}</button></div></div>`).join(''):'কোনো পণ্য পাওয়া যায়নি।'}
+async function api(path,opt={}){
+  const r=await fetch(path,{credentials:'same-origin',cache:'no-store',...opt});
+  const text=await r.text();
+  let j={}; try{j=text?JSON.parse(text):{}}catch(e){j={error:text||('HTTP '+r.status)}}
+  if(r.status===401)throw Error('UNAUTHORIZED');
+  if(!r.ok)throw Error(j.error||('HTTP '+r.status));
+  return j;
+}
+async function login(){
+  const password=$('pw').value.trim();
+  if(!password){$('msg').textContent='Password দিন।';return}
+  $('msg').textContent='Login হচ্ছে...';
+  try{
+    await api('/api/admin/login',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({password})});
+    $('pw').value='';
+    await showApp();
+  }catch(e){$('msg').textContent=e.message==='UNAUTHORIZED'?'Password ভুল।':'Login ব্যর্থ: '+e.message}
+}
+async function showApp(){
+  $('login').classList.add('hidden');$('app').classList.remove('hidden');
+  try{await loadAll()}catch(e){$('app').classList.remove('hidden');alert('Admin data load হয়নি: '+e.message)}
+}
+async function logout(){
+  try{await fetch('/api/admin/logout',{method:'POST',credentials:'same-origin',cache:'no-store'})}finally{location.reload()}
+}
+(async()=>{
+  try{await api('/api/admin/products');await showApp()}catch(e){$('login').classList.remove('hidden');$('app').classList.add('hidden')}
+})();
+async function loadAll(){
+  const j=await api('/api/admin/products');
+  products=Array.isArray(j.products)?j.products:[];
+  renderProducts();
+  try{await loadOrders()}catch(e){orders=[];renderOrders([]);$('countOrders').textContent='0';console.warn(e)}
+}
+async function loadOrders(){
+  const j=await api('/api/admin/orders');orders=Array.isArray(j.orders)?j.orders:[];renderOrders(orders);$('countOrders').textContent=orders.length;
+}
+async function changePassword(){
+  const current=$('currentPassword').value,newp=$('newPassword').value;
+  if(!current||!newp)return alert('বর্তমান ও নতুন Password দুটোই দিন।');
+  try{await api('/api/admin/password',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({currentPassword:current,newPassword:newp})});$('currentPassword').value='';$('newPassword').value='';$('passwordMsg').textContent='Password সফলভাবে পরিবর্তন হয়েছে।';}catch(e){$('passwordMsg').textContent=e.message==='UNAUTHORIZED'?'Session শেষ হয়েছে। আবার Login করুন।':e.message}
+}
+let productView='all';function showProductView(view){productView=view;renderProducts();$('productBox').scrollIntoView({behavior:'auto',block:'start'});$('productBox').classList.add('focusbox');setTimeout(()=>$('productBox').classList.remove('focusbox'),900)}function renderProducts(){const q=($('productSearch').value||'').toLowerCase();let list=products.filter(p=>(p.name+' '+p.category+' '+p.supplier).toLowerCase().includes(q));$('countProducts').textContent=products.length;$('countActive').textContent=products.filter(p=>p.active).length;if(productView==='active')list=list.filter(p=>p.active);$('productFilterNote').textContent=productView==='active'?'শুধু Active পণ্য দেখানো হচ্ছে।':'সব পণ্য দেখানো হচ্ছে।';$('products').innerHTML=list.length?list.map(p=>`<div class="card"><div class="pic">${p.image?`<img src="${p.image}" alt="">`:'ছবি নেই'}</div><b>${esc(p.name)}</b><div class="small">${esc(p.category)} · Stock ${p.stock} · ${p.active?'<span class="ok">Active</span>':'Inactive'}</div><div>বিক্রয়: ৳${money(p.price)} | ক্রয়: ৳${money(p.cost)}</div><div class="profit">লাভ: ৳${money(p.price-p.cost)}</div><div class="small">Quality: ${esc(p.sampleTest)}</div><div class="row" style="margin-top:8px"><button onclick="edit(${JSON.stringify(p.id)})">Edit</button><button class="green" onclick="toggle(${JSON.stringify(p.id)})">${p.active?'Hide':'Active'}</button></div></div>`).join(''):'কোনো পণ্য পাওয়া যায়নি।'}
 function esc(s){return String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
 function edit(id){const p=products.find(x=>x.id===id);if(!p)return;editingId=id;imageData=p.image||'';['name','category','desc','size','usage','benefits','price','cost','stock','supplier','sampleTest','notes'].forEach(k=>$(k).value=p[k]??'');$('active').value=String(!!p.active);$('id').value=id;$('preview').innerHTML=p.image?`<img src="${p.image}">`:'ছবি নেই';updateProfit();scrollTo(0,0)}
 function newProduct(){editingId='';imageData='';['name','category','desc','size','usage','benefits','price','cost','stock','supplier','notes'].forEach(k=>$(k).value='');$('sampleTest').value='Pending';$('active').value='false';$('id').value='';$('imageFile').value='';$('preview').textContent='ছবি নির্বাচন করুন';updateProfit()}
 function previewImage(){const f=$('imageFile').files[0];if(!f)return;const r=new FileReader();r.onload=()=>{const im=new Image();im.onload=()=>{const c=document.createElement('canvas'),max=900,s=Math.min(1,max/im.width,max/im.height);c.width=Math.round(im.width*s);c.height=Math.round(im.height*s);c.getContext('2d').drawImage(im,0,0,c.width,c.height);imageData=c.toDataURL('image/jpeg',.72);$('preview').innerHTML=`<img src="${imageData}">`};im.src=r.result};r.readAsDataURL(f)}
 function updateProfit(){$('profit').textContent=`সম্ভাব্য পণ্য লাভ: ৳${money(Number($('price').value||0)-Number($('cost').value||0))}`}$('price').oninput=updateProfit;$('cost').oninput=updateProfit;
-async function saveProduct(){try{const p={id:$('id').value||undefined,name:$('name').value.trim(),category:$('category').value,desc:$('desc').value,size:$('size').value,usage:$('usage').value,benefits:$('benefits').value,price:Number($('price').value||0),cost:Number($('cost').value||0),stock:Number($('stock').value||0),supplier:$('supplier').value,sampleTest:$('sampleTest').value,active:$('active').value==='true',notes:$('notes').value,image:imageData};if(!p.name)return alert('পণ্যের নাম দিন');const r=await api('/api/admin/products',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(p)});alert('পণ্য Save হয়েছে');await loadAll();edit(r.product.id)}catch(e){alert(e.message)}}
+async function saveProduct(){
+  const btn=[...document.querySelectorAll('button')].find(b=>b.textContent.includes('Save / Update'));
+  try{
+    const price=Number($('price').value||0),cost=Number($('cost').value||0),stock=Number($('stock').value||0);
+    if(!Number.isFinite(price)||price<0||!Number.isFinite(cost)||cost<0||!Number.isFinite(stock)||stock<0)return alert('দাম, ক্রয়মূল্য ও Stock সঠিক সংখ্যা দিন।');
+    const p={id:$('id').value||undefined,name:$('name').value.trim(),category:$('category').value.trim()||'সাধারণ',desc:$('desc').value,size:$('size').value,usage:$('usage').value,benefits:$('benefits').value,price,cost,stock,supplier:$('supplier').value,sampleTest:$('sampleTest').value,active:$('active').value==='true',notes:$('notes').value,image:imageData||''};
+    if(!p.name)return alert('পণ্যের নাম দিন');
+    if(btn)btn.disabled=true;
+    const r=await api('/api/admin/products',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(p)});
+    // Save is independent of the order-list refresh; a saved product must remain saved even if orders fail to load.
+    products=[...products.filter(x=>String(x.id)!==String(r.product.id)),r.product];
+    renderProducts();
+    alert('পণ্য Save হয়েছে।');
+    edit(r.product.id);
+    try{await loadOrders()}catch(e){}
+  }catch(e){alert(e.message==='UNAUTHORIZED'?'Admin session শেষ হয়েছে। আবার Login করুন।':'Save ব্যর্থ: '+e.message)}finally{if(btn)btn.disabled=false}
+}
 async function deleteProduct(){if(!editingId)return alert('আগে একটি পণ্য select করুন');if(!confirm('এই পণ্যটি Delete করবেন?'))return;try{await api('/api/admin/products/'+editingId,{method:'DELETE'});newProduct();await loadAll()}catch(e){alert(e.message)}}
 async function toggle(id){const p=products.find(x=>x.id===id);if(!p)return;try{p.active=!p.active;await api('/api/admin/products',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(p)});await loadAll()}catch(e){alert(e.message)}}
-let orderView='orders';function setNav(view){['Customers','Payment','Delivery','Orders'].forEach(x=>{const el=$('nav'+x);if(el)el.classList.toggle('active',view===x.toLowerCase())});}function showOrderView(view){orderView=view;setNav(view);renderOrders(orders);$('ordersBox').scrollIntoView({behavior:'auto',block:'start'});$('ordersBox').classList.add('focusbox');setTimeout(()=>$('ordersBox').classList.remove('focusbox'),900)}function renderOrders(list){let shown=list;if(orderView==='payment')shown=list.filter(o=>o.senderNumber||o.trxid||Number(o.delivery||0)>0||Number(o.codAmount??o.subtotal??0)>0);else if(orderView==='delivery')shown=list.filter(o=>Number(o.delivery||0)>=0);$('orders').innerHTML=shown.length?shown.map(o=>`<tr><td>${esc(o.id)}<br><span class="small">${new Date(o.createdAt).toLocaleString('bn-BD')}</span></td><td><b>${esc(o.name)}</b><br>${esc(o.phone)}<br>${esc(o.address)}</td><td>${(o.items||[]).map(i=>`${esc(i.name)} × ${i.qty}`).join('<br>')}</td><td><b>ডেলিভারি: ৳${money(o.delivery)}</b><br><span class="small">bKash advance</span><br>Sender: ${esc(o.senderNumber||'')}<br>TrxID: ${esc(o.trxid||'')}<br><b>COD: ৳${money(o.codAmount??o.subtotal)}</b><br>Total: ৳${money(o.total)}</td><td><select id="s_${o.id}"><option ${o.status==='নতুন'?'selected':''}>নতুন</option><option ${o.status==='কনফার্ম'?'selected':''}>কনফার্ম</option><option ${o.status==='কুরিয়ারে'?'selected':''}>কুরিয়ারে</option><option ${o.status==='ডেলিভার্ড'?'selected':''}>ডেলিভার্ড</option><option ${o.status==='বাতিল'?'selected':''}>বাতিল</option></select></td><td><input id="c_${o.id}" value="${esc(o.courier||'')}" placeholder="যেমন: Pathao"></td><td><input id="t_${o.id}" value="${esc(o.tracking||'')}" placeholder="Tracking"></td><td><button onclick="saveOrder('${o.id}')">Save</button></td></tr>`).join(''):'এখনো কোনো online order নেই।'}
+let orderView='orders';
+function setNav(view){['Customers','Payment','Delivery','Orders'].forEach(x=>{const el=$('nav'+x);if(el)el.classList.toggle('active',view===x.toLowerCase())})}
+function showOrderView(view){orderView=view;setNav(view);renderOrders(orders);$('ordersBox').scrollIntoView({behavior:'auto',block:'start'});$('ordersBox').classList.add('focusbox');setTimeout(()=>$('ordersBox').classList.remove('focusbox'),900)}
+function renderOrders(list){
+  let shown=list;
+  if(orderView==='customers'){
+    const seen=new Set();shown=list.filter(o=>{const k=String(o.phone||'');if(!k||seen.has(k))return false;seen.add(k);return true});
+  }else if(orderView==='payment'){
+    shown=list.filter(o=>o.senderNumber||o.trxid||Number(o.delivery||0)>0||Number(o.codAmount??o.subtotal)>0);
+  }else if(orderView==='delivery'){
+    shown=list.filter(o=>Number(o.delivery||0)>=0);
+  }
+  $('orders').innerHTML=shown.length?shown.map(o=>{
+    const cod=Number(o.codAmount??o.subtotal??0), total=Number(o.total??(cod+Number(o.delivery||0)));
+    return `<tr><td>${esc(o.id)}<br><span class="small">${new Date(o.createdAt).toLocaleString('bn-BD')}</span></td><td><b>${esc(o.name)}</b><br>${esc(o.phone)}<br>${esc(o.address)}</td><td>${(o.items||[]).map(i=>`${esc(i.name)} × ${i.qty}`).join('<br>')}</td><td><b>ডেলিভারি: ৳${money(o.delivery)}</b><br><span class="small">bKash advance</span><br>Sender: ${esc(o.senderNumber||'')}<br>TrxID: ${esc(o.trxid||'')}<br><b>COD: ৳${money(cod)}</b><br>Total: ৳${money(total)}</td><td><select id="s_${esc(o.id)}"><option ${o.status==='নতুন'?'selected':''}>নতুন</option><option ${o.status==='কনফার্ম'?'selected':''}>কনফার্ম</option><option ${o.status==='কুরিয়ারে'?'selected':''}>কুরিয়ারে</option><option ${o.status==='ডেলিভার্ড'?'selected':''}>ডেলিভার্ড</option><option ${o.status==='বাতিল'?'selected':''}>বাতিল</option></select></td><td><input id="c_${esc(o.id)}" value="${esc(o.courier||'')}" placeholder="যেমন: Pathao"></td><td><input id="t_${esc(o.id)}" value="${esc(o.tracking||'')}" placeholder="Tracking"></td><td><button onclick='saveOrder(${JSON.stringify(String(o.id))})'>Save</button></td></tr>`
+  }).join(''):'এখনো কোনো online order নেই।';
+}
 async function saveOrder(id){try{await api('/api/admin/orders/'+id,{method:'PUT',headers:{'content-type':'application/json'},body:JSON.stringify({status:$('s_'+id).value,courier:$('c_'+id).value,tracking:$('t_'+id).value})});alert('Order update হয়েছে');await loadOrders()}catch(e){alert(e.message)}}
 </script></body></html>
